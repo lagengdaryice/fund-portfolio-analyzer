@@ -79,6 +79,75 @@
   .progress-bar {
     background: linear-gradient(90deg, #0ea5e9 0%, #6366f1 100%);
   }
+  .kpi-value-up {
+    color: #34d399;
+  }
+  .kpi-value-down {
+    color: #f87171;
+  }
+  .table-row-hover:hover {
+    background: rgba(56, 189, 248, 0.05);
+  }
+  .sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .sortable-header:hover {
+    color: #38bdf8;
+  }
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    padding: 14px 20px;
+    min-width: 280px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    animation: toastSlideIn 0.3s ease;
+  }
+  @keyframes toastSlideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes toastFadeOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(120%); }
+  }
+  .spinner-ring {
+    display: inline-block;
+    position: relative;
+    width: 64px;
+    height: 64px;
+  }
+  .spinner-ring div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    margin: 4px;
+    border: 4px solid #38bdf8;
+    border-radius: 50%;
+    animation: spinner-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-color: #38bdf8 transparent transparent transparent;
+  }
+  .spinner-ring div:nth-child(1) { animation-delay: -0.45s; }
+  .spinner-ring div:nth-child(2) { animation-delay: -0.3s; }
+  .spinner-ring div:nth-child(3) { animation-delay: -0.15s; }
+  @keyframes spinner-ring {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 }
 </style>
 </head>
@@ -91,11 +160,43 @@
   <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/3 rounded-full blur-3xl"></div>
 </div>
 
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Top Info Bar -->
+<div class="relative z-10 bg-slate-900/80 border-b border-slate-800/60">
+  <div class="max-w-6xl mx-auto px-6 py-2 flex items-center justify-between text-xs text-slate-500">
+    <div class="flex items-center gap-4">
+      <span class="flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        报告生成日期：<span id="reportDate">-</span>
+      </span>
+      <span class="hidden sm:flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        数据来源：用户上传持仓数据 + 私募基金业绩文件
+      </span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="refreshBtn" class="flex items-center gap-1 text-slate-500 hover:text-sky-400 transition" title="刷新数据">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        刷新
+      </button>
+      <span>v1.1</span>
+    </div>
+  </div>
+</div>
+
 <!-- Header -->
 <header class="relative z-10 glass border-b border-sky-500/10">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
@@ -106,7 +207,7 @@
       </div>
     </div>
     <div class="text-sm text-slate-400">
-      <span class="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20">v1.0</span>
+      <span class="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20">专业版</span>
     </div>
   </div>
 </header>
@@ -127,7 +228,7 @@
   <!-- Upload Section -->
   <section class="mb-10">
     <div class="grid md:grid-cols-2 gap-6">
-      
+
       <!-- Portfolio Upload -->
       <div class="glass-card rounded-2xl p-6" id="portfolioZone">
         <div class="flex items-center gap-3 mb-4">
@@ -142,7 +243,7 @@
           </div>
           <span class="ml-auto px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">必填</span>
         </div>
-        
+
         <div class="upload-zone rounded-xl p-8 text-center cursor-pointer" id="portfolioDropzone">
           <input type="file" id="portfolioInput" accept=".xlsx,.xls" class="hidden">
           <div id="portfolioPlaceholder">
@@ -158,6 +259,26 @@
             </svg>
             <p class="text-emerald-400 font-medium" id="portfolioFileName"></p>
             <p class="text-xs text-slate-500 mt-1" id="portfolioFileSize"></p>
+          </div>
+          <!-- Upload Progress -->
+          <div id="portfolioProgress" class="hidden mt-4">
+            <div class="max-w-xs mx-auto bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div id="portfolioProgressBar" class="progress-bar h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1" id="portfolioProgressText">准备上传...</p>
+          </div>
+        </div>
+
+        <!-- File Format Hint -->
+        <div class="mt-4 p-3 rounded-lg bg-slate-800/40 border border-slate-700/40">
+          <p class="text-xs text-slate-500 mb-2 font-medium">文件格式要求：</p>
+          <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>基金代码 / Fund Code</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>产品名称 / Fund Name</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>成本价 / Cost Price</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>当前份额 / Shares</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>T-1日净值 / NAV</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-sky-400"></span>证券市值 / Market Value</span>
           </div>
         </div>
       </div>
@@ -176,7 +297,7 @@
           </div>
           <span class="ml-auto px-2 py-0.5 rounded text-xs bg-slate-500/20 text-slate-400 border border-slate-500/30">可选</span>
         </div>
-        
+
         <div class="upload-zone rounded-xl p-8 text-center cursor-pointer" id="privateDropzone">
           <input type="file" id="privateInput" accept=".xlsx,.xls" class="hidden">
           <div id="privatePlaceholder">
@@ -193,6 +314,23 @@
             <p class="text-emerald-400 font-medium" id="privateFileName"></p>
             <p class="text-xs text-slate-500 mt-1" id="privateFileSize"></p>
           </div>
+          <!-- Upload Progress -->
+          <div id="privateProgress" class="hidden mt-4">
+            <div class="max-w-xs mx-auto bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div id="privateProgressBar" class="progress-bar h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-1" id="privateProgressText">准备上传...</p>
+          </div>
+        </div>
+
+        <!-- File Format Hint -->
+        <div class="mt-4 p-3 rounded-lg bg-slate-800/40 border border-slate-700/40">
+          <p class="text-xs text-slate-500 mb-2 font-medium">文件格式要求：</p>
+          <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-purple-400"></span>产品代码 / Code</span>
+            <span class="flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-purple-400"></span>年度收益率列（2018-2025）</span>
+          </div>
+          <p class="text-xs text-slate-600 mt-2">每个工作表对应一只基金，列名为年份（如 2018, 2019...）</p>
         </div>
       </div>
     </div>
@@ -211,12 +349,8 @@
 
   <!-- Loading State -->
   <section id="loadingSection" class="hidden text-center py-12">
-    <div class="relative w-20 h-20 mx-auto mb-6">
-      <div class="absolute inset-0 rounded-full border-4 border-slate-700"></div>
-      <div class="absolute inset-0 rounded-full border-4 border-sky-500 border-t-transparent animate-spin"></div>
-      <svg class="absolute inset-0 m-auto w-8 h-8 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-      </svg>
+    <div class="spinner-ring mx-auto mb-6">
+      <div></div><div></div><div></div><div></div>
     </div>
     <h3 class="text-xl font-semibold mb-2">正在分析数据...</h3>
     <p class="text-slate-400" id="loadingText">读取基金持仓文件</p>
@@ -227,28 +361,88 @@
 
   <!-- Results Section -->
   <section id="resultsSection" class="hidden">
-    
+
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       <div class="metric-card rounded-xl p-5">
-        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">组合总成本</p>
-        <p class="text-2xl font-bold text-white" id="kpiCost">-</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-slate-500 uppercase tracking-wider">组合总成本</p>
+          <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <p class="text-3xl font-bold text-white tracking-tight" id="kpiCost">-</p>
+        <p class="text-xs text-slate-600 mt-1">初始投入成本</p>
       </div>
       <div class="metric-card rounded-xl p-5">
-        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">组合总市值</p>
-        <p class="text-2xl font-bold text-white" id="kpiValue">-</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-slate-500 uppercase tracking-wider">组合总市值</p>
+          <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+        <p class="text-3xl font-bold text-white tracking-tight" id="kpiValue">-</p>
+        <p class="text-xs text-slate-600 mt-1">当前市场价值</p>
       </div>
       <div class="metric-card rounded-xl p-5">
-        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">总收益率</p>
-        <p class="text-2xl font-bold" id="kpiReturn">-</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-slate-500 uppercase tracking-wider">总收益率</p>
+          <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <p class="text-3xl font-bold" id="kpiReturn">-</p>
+          <span id="kpiReturnArrow"></span>
+        </div>
+        <p class="text-xs text-slate-600 mt-1">整体盈亏比例</p>
       </div>
       <div class="metric-card rounded-xl p-5">
-        <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">2025年加权收益</p>
-        <p class="text-2xl font-bold" id="kpi2025">-</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-slate-500 uppercase tracking-wider">2025年加权收益</p>
+          <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <p class="text-3xl font-bold" id="kpi2025">-</p>
+          <span id="kpi2025Arrow"></span>
+        </div>
+        <p class="text-xs text-slate-600 mt-1">本年度组合表现</p>
       </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Investment Overview -->
+    <div class="glass-card rounded-2xl p-6 mb-8">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-200">投资概览</h3>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="investmentOverview">
+        <div class="p-4 rounded-xl bg-slate-800/40 border border-slate-700/30">
+          <p class="text-xs text-slate-500 mb-1">基金数量</p>
+          <p class="text-2xl font-bold text-white" id="overviewFundCount">-</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-800/40 border border-slate-700/30">
+          <p class="text-xs text-slate-500 mb-1">最早购买时间</p>
+          <p class="text-2xl font-bold text-white" id="overviewFirstPurchase">-</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-800/40 border border-slate-700/30">
+          <p class="text-xs text-slate-500 mb-1">最长持有期</p>
+          <p class="text-2xl font-bold text-white" id="overviewMaxHolding">-</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-800/40 border border-slate-700/30">
+          <p class="text-xs text-slate-500 mb-1">平均持有期</p>
+          <p class="text-2xl font-bold text-white" id="overviewAvgHolding">-</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
     <div class="grid md:grid-cols-2 gap-6 mb-8">
       <div class="chart-container p-5">
         <h3 class="text-lg font-semibold mb-4 text-slate-200">组合加权年度收益率</h3>
@@ -260,11 +454,22 @@
       </div>
     </div>
 
+    <!-- Charts Row 2 -->
     <div class="chart-container p-5 mb-8">
       <h3 class="text-lg font-semibold mb-4 text-slate-200">各基金持有期年化收益率</h3>
       <div id="annualizedChart" style="width:100%;height:400px"></div>
     </div>
 
+    <!-- Cumulative Return Chart (New) -->
+    <div class="chart-container p-5 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-slate-200">累计收益曲线</h3>
+        <span class="text-xs text-slate-500">自2018年以来组合累计收益走势</span>
+      </div>
+      <div id="cumulativeChart" style="width:100%;height:400px"></div>
+    </div>
+
+    <!-- Heatmap -->
     <div class="chart-container p-5 mb-8">
       <h3 class="text-lg font-semibold mb-4 text-slate-200">年度收益热力图</h3>
       <div id="heatmapChart" style="width:100%;height:500px"></div>
@@ -272,24 +477,44 @@
 
     <!-- Data Table -->
     <div class="glass-card rounded-xl overflow-hidden mb-8">
-      <div class="p-5 border-b border-slate-700/50">
+      <div class="p-5 border-b border-slate-700/50 flex items-center justify-between flex-wrap gap-3">
         <h3 class="text-lg font-semibold text-slate-200">基金业绩明细</h3>
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span id="tableInfo">共 0 只基金</span>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-slate-800/50">
-              <th class="px-4 py-3 text-left text-slate-400 font-medium">基金名称</th>
-              <th class="px-4 py-3 text-left text-slate-400 font-medium">分类</th>
-              <th class="px-4 py-3 text-right text-slate-400 font-medium">成本价</th>
-              <th class="px-4 py-3 text-right text-slate-400 font-medium">当前净值</th>
-              <th class="px-4 py-3 text-right text-slate-400 font-medium">市值</th>
-              <th class="px-4 py-3 text-right text-slate-400 font-medium">总收益</th>
-              <th class="px-4 py-3 text-right text-slate-400 font-medium">年化收益</th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium sortable-header" data-sort="name">基金名称 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-left text-slate-400 font-medium sortable-header" data-sort="category">分类 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium sortable-header" data-sort="costPrice">成本价 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium sortable-header" data-sort="nav">当前净值 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium sortable-header" data-sort="marketValue">市值 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium sortable-header" data-sort="totalReturn">总收益 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium sortable-header" data-sort="annualizedReturn">年化收益 <span class="sort-icon inline-block w-3 text-center opacity-30">&#8693;</span></th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2018</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2019</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2020</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2021</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2022</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2023</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2024</th>
+              <th class="px-4 py-3 text-right text-slate-400 font-medium">2025</th>
             </tr>
           </thead>
           <tbody id="fundTableBody"></tbody>
         </table>
+      </div>
+      <!-- Pagination -->
+      <div id="tablePagination" class="hidden px-5 py-3 border-t border-slate-700/50 flex items-center justify-between">
+        <span class="text-xs text-slate-500" id="paginationInfo">第 1 页，共 1 页</span>
+        <div class="flex items-center gap-2">
+          <button id="pagePrev" class="px-3 py-1 rounded-lg bg-slate-800 text-slate-400 text-xs hover:bg-slate-700 transition disabled:opacity-30">上一页</button>
+          <div id="pageNumbers" class="flex items-center gap-1"></div>
+          <button id="pageNext" class="px-3 py-1 rounded-lg bg-slate-800 text-slate-400 text-xs hover:bg-slate-700 transition disabled:opacity-30">下一页</button>
+        </div>
       </div>
     </div>
 
@@ -314,8 +539,30 @@
 
 <!-- Footer -->
 <footer class="relative z-10 border-t border-slate-800/50 py-8 mt-12">
-  <div class="max-w-6xl mx-auto px-6 text-center text-sm text-slate-500">
-    <p>基金投资组合分析器 v1.0 | 数据仅供参考，投资有风险</p>
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-3 gap-6 mb-6">
+      <div>
+        <h4 class="text-sm font-semibold text-slate-300 mb-2">免责声明</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          本工具生成的所有数据和分析结果仅供参考，不构成任何投资建议。投资者应自行判断并承担投资风险。过往业绩不代表未来表现，基金投资有风险，入市需谨慎。
+        </p>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-slate-300 mb-2">数据来源</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          公募基金数据来源于天天基金网等公开渠道；私募基金数据来源于用户上传的业绩文件。本工具不对数据的准确性和完整性作出任何保证。
+        </p>
+      </div>
+      <div>
+        <h4 class="text-sm font-semibold text-slate-300 mb-2">关于工具</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          基金投资组合分析器 v1.1 | 使用 ECharts、SheetJS 和 Tailwind CSS 构建。所有数据处理在本地完成，不会上传至任何服务器。
+        </p>
+      </div>
+    </div>
+    <div class="text-center text-xs text-slate-700 pt-4 border-t border-slate-800/30">
+      <p>基金投资组合分析器 v1.1 | 数据仅供参考，投资有风险</p>
+    </div>
   </div>
 </footer>
 
