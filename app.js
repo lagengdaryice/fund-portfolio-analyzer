@@ -311,11 +311,13 @@ function parsePrivateFundWorkbook(workbook) {
 
       let foundYearsInRow = false;
       row.forEach((cell, idx) => {
-        if (typeof cell === 'string' && /^20\d{2}$/.test(cell.trim())) {
-          yearCols[cell.trim()] = idx;
-          foundYearsInRow = true;
-        }
-      });
+          // Support both string ("2025") and number (2025) year formats
+          const cellStr = String(cell).trim();
+          if (/^20\d{2}$/.test(cellStr)) {
+            yearCols[cellStr] = idx;
+            foundYearsInRow = true;
+          }
+        });
 
       if (foundYearsInRow) {
         // The data starts after this header row
