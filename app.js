@@ -343,7 +343,9 @@ function parsePrivateFundWorkbook(workbook) {
       Object.entries(yearCols).forEach(([year, col]) => {
         const val = row[col];
         if (val !== undefined && val !== null && val !== '') {
-          returns[code][year] = parseNumber(val) / 100;
+          // The return values in the Excel are already in decimal format (e.g., 0.3722 = 37.22%)
+          // No need to divide by 100 again
+          returns[code][year] = parseNumber(val);
         }
       });
     }
