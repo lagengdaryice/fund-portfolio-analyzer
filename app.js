@@ -283,39 +283,67 @@ function parsePrivateFundWorkbook(workbook) {
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    // Find header row with years
-    let headerRow = -1;
-    let codeCol = -1;
-    let yearCols = {};
+    if (!jsonData || jsonData.length === 0) return;
 
+    // Step 1: Find code column (产品代码/基金代码) - search first 15 rows
+    let codeCol = -1;
     for (let i = 0; i < Math.min(15, jsonData.length); i++) {
       const row = jsonData[i];
       if (!row) continue;
-
       row.forEach((cell, idx) => {
-        if (cell === '产品代码' || cell === '基金代码' || cell === 'Code') codeCol = idx;
-        if (typeof cell === 'string' && /^20\d{2}$/.test(cell.trim())) {
-          yearCols[cell.trim()] = idx;
-          headerRow = i;
+        if (cell === '产品代码' || cell === '基金代码' || cell === 'Code') {
+          codeCol = idx;
         }
       });
+      if (codeCol >= 0) break;
     }
 
-    if (headerRow >= 0 && codeCol >= 0) {
-      for (let i = headerRow + 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row || !row[codeCol]) continue;
+    if (codeCol < 0) return; // No code column found
 
-        const code = String(row[codeCol]).trim();
-        returns[code] = {};
+    // Step 2: Find year columns (support two-level headers)
+    // Year headers like "2025", "2024" may be in a sub-header row
+    let yearCols = {};
+    let dataStartRow = -1;
 
-        Object.entries(yearCols).forEach(([year, col]) => {
-          const val = row[col];
-          if (val !== undefined && val !== null && val !== '') {
-            returns[code][year] = parseNumber(val) / 100;
-          }
-        });
+    for (let i = 0; i < Math.min(20, jsonData.length); i++) {
+      const row = jsonData[i];
+      if (!row) continue;
+
+      let foundYearsInRow = false;
+      row.forEach((cell, idx) => {
+        if (typeof cell === 'string' && /^20\d{2}$/.test(cell.trim())) {
+          yearCols[cell.trim()] = idx;
+          foundYearsInRow = true;
+        }
+      });
+
+      if (foundYearsInRow) {
+        // The data starts after this header row
+        dataStartRow = i + 1;
       }
+    }
+
+    if (dataStartRow < 0 || Object.keys(yearCols).length === 0) return;
+
+    // Step 3: Parse data rows
+    for (let i = dataStartRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || !row[codeCol]) continue;
+
+      const code = String(row[codeCol]).trim();
+      if (!code) continue;
+
+      // Initialize if not exists
+      if (!returns[code]) {
+        returns[code] = {};
+      }
+
+      Object.entries(yearCols).forEach(([year, col]) => {
+        const val = row[col];
+        if (val !== undefined && val !== null && val !== '') {
+          returns[code][year] = parseNumber(val) / 100;
+        }
+      });
     }
   });
 
