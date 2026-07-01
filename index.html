@@ -443,11 +443,8 @@
     </div>
 
     <!-- Charts Row 1 -->
-    <div class="grid md:grid-cols-2 gap-6 mb-8">
-      <div class="chart-container p-5">
-        <h3 class="text-lg font-semibold mb-4 text-slate-200">组合加权年度收益率</h3>
-        <div id="yearlyChart" style="width:100%;height:300px"></div>
-      </div>
+    <div class="mb-8">
+      <!-- 组合加权年度收益率图表已移除 -->
       <div class="chart-container p-5">
         <h3 class="text-lg font-semibold mb-4 text-slate-200">基金分类市值占比</h3>
         <div id="categoryChart" style="width:100%;height:300px"></div>
@@ -469,11 +466,8 @@
       <div id="cumulativeChart" style="width:100%;height:400px"></div>
     </div>
 
-    <!-- Heatmap -->
-    <div class="chart-container p-5 mb-8">
-      <h3 class="text-lg font-semibold mb-4 text-slate-200">年度收益热力图</h3>
-      <div id="heatmapChart" style="width:100%;height:500px"></div>
-    </div>
+    <!-- 热力图已移除 -->
+    <div class="hidden" id="heatmapChart"></div>
 
     <!-- Data Table -->
     <div class="glass-card rounded-xl overflow-hidden mb-8">
@@ -530,7 +524,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
         </svg>
-        导出 HTML 报告
+        导出 PDF 报告
       </button>
     </div>
   </section>

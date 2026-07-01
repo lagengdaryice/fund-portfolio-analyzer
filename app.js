@@ -9,7 +9,6 @@ let privateFundData = null;
 let analysisResults = null;
 let chartInstances = {};
 let publicFundDataCache = {};
-let simulationNoticeShown = false;
 
 // DOM Elements
 const portfolioInput = document.getElementById('portfolioInput');
@@ -355,11 +354,12 @@ function parsePrivateFundWorkbook(workbook) {
 }
 
 // ============================================================================
-// Public Fund Data Fetching (Simulated)
+// Public Fund Data (Simulated with deterministic hash)
 // ============================================================================
 
 /**
- * Generate a deterministic pseudo-random number from a string seed
+ * Generate a deterministic pseudo-random number from a string seed.
+ * Uses a simple hash function for consistent results per fund code/name.
  */
 function seededRandom(seed) {
   let hash = 0;
@@ -374,6 +374,11 @@ function seededRandom(seed) {
 /**
  * Generate simulated yearly returns for a public fund based on its code and name.
  * The data is pseudo-random but deterministic (same code+name always gives same data).
+ *
+ * NOTE: Due to browser cross-origin (CORS) restrictions, we cannot directly fetch
+ * real fund data from APIs like fundgz.1234567.com.cn or api.fund.eastmoney.com.
+ * If real data is needed, a server-side proxy should be used to relay those requests.
+ * This simulated data uses deterministic hash based on fund code for consistency.
  */
 function generateSimulatedReturns(fundCode, fundName) {
   const years = ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
@@ -432,8 +437,12 @@ function generateSimulatedReturns(fundCode, fundName) {
 }
 
 /**
- * Fetch public fund data. Since browsers cannot make cross-origin requests to fund websites,
- * this function first checks privateFundData, then falls back to simulated data.
+ * Fetch public fund data. Due to browser CORS restrictions, this function
+ * first checks privateFundData, then falls back to simulated data generated
+ * from a deterministic hash of the fund code.
+ *
+ * To use real data from e.g. 天天基金网 (fundgz.1234567.com.cn), set up a
+ * server-side proxy to relay API requests and replace this function accordingly.
  */
 function fetchPublicFundData(fundCode, fundName) {
   // Validate inputs
@@ -453,15 +462,9 @@ function fetchPublicFundData(fundCode, fundName) {
     return publicFundDataCache[fundCode];
   }
 
-  // Generate simulated data
+  // Generate simulated data (deterministic based on fund code)
   const simulated = generateSimulatedReturns(fundCode, fundName);
   publicFundDataCache[fundCode] = simulated;
-
-  // Show notice once
-  if (!simulationNoticeShown) {
-    showToast('公募基金数据为模拟数据，仅供参考', 'warning');
-    simulationNoticeShown = true;
-  }
 
   return simulated;
 }
@@ -484,8 +487,7 @@ generateBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Reset simulation notice for new analysis
-  simulationNoticeShown = false;
+  // Reset cache for new analysis
   publicFundDataCache = {};
 
   // Show loading
@@ -560,12 +562,6 @@ function initAllCharts() {
   if (!analysisResults) return;
 
   try {
-    renderYearlyChart(analysisResults.weightedReturns);
-  } catch (e) {
-    console.error('Yearly chart error:', e);
-  }
-
-  try {
     renderCategoryChart(analysisResults.categories);
   } catch (e) {
     console.error('Category chart error:', e);
@@ -581,12 +577,6 @@ function initAllCharts() {
     renderCumulativeChart(analysisResults.funds, analysisResults.weightedReturns);
   } catch (e) {
     console.error('Cumulative chart error:', e);
-  }
-
-  try {
-    renderHeatmap(analysisResults.funds);
-  } catch (e) {
-    console.error('Heatmap error:', e);
   }
 }
 
@@ -692,6 +682,20 @@ function calculateAnalysis() {
     }
     categories[cat].count++;
     categories[cat].value += fund.marketValue;
+  });
+
+  // Sort: 公募 first, then 专户, then 私募, by market value descending within each category
+  funds.sort((a, b) => {
+    const getCategoryOrder = (f) => {
+      const cat = (f.category || '').trim();
+      if (cat.includes('公募')) return 0;
+      if (cat.includes('专户')) return 1;
+      return 2; // 私募
+    };
+    const orderA = getCategoryOrder(a);
+    const orderB = getCategoryOrder(b);
+    if (orderA !== orderB) return orderA - orderB;
+    return (b.marketValue || 0) - (a.marketValue || 0);
   });
 
   return {
@@ -1414,14 +1418,14 @@ function exportToExcel() {
   }
 }
 
-function exportToHtml() {
+function exportToPdf() {
   if (!analysisResults) {
     showToast('请先生成分析报告', 'warning');
     return;
   }
 
   try {
-    // Build a standalone HTML report
+    // Build a standalone HTML report for printing
     const r = analysisResults;
     const years = ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
 
@@ -1472,28 +1476,42 @@ function exportToHtml() {
 <title>基金投资组合分析报告</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0e1a;color:#e2e8f0;line-height:1.6;padding:40px 20px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#1e293b;line-height:1.6;padding:40px 20px}
+@media print{
+  body{padding:20px 15px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .container{max-width:100%}
+  .no-print{display:none!important}
+  table{page-break-inside:auto}
+  tr{page-break-inside:avoid;page-break-after:auto}
+  .kpi{page-break-inside:avoid}
+  @page{margin:15mm;size:A4 landscape}
+}
+@media screen{
+  body{background:#0a0e1a;color:#e2e8f0;padding:40px 20px}
+}
 .container{max-width:1200px;margin:0 auto}
-h1{font-size:2rem;margin-bottom:8px;background:linear-gradient(135deg,#38bdf8,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-h2{font-size:1.3rem;margin:32px 0 16px;color:#e2e8f0;border-bottom:1px solid #1e293b;padding-bottom:8px}
-.subtitle{color:#94a3b8;margin-bottom:32px}
+h1{font-size:2rem;margin-bottom:8px;color:#0ea5e9}
+h2{font-size:1.3rem;margin:32px 0 16px;color:#334155;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.subtitle{color:#64748b;margin-bottom:32px}
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
-.kpi-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px}
-.kpi-label{font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
-.kpi-value{font-size:1.6rem;font-weight:700}
-.pos{color:#34d399}.neg{color:#f87171}
+.kpi-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px}
+.kpi-label{font-size:0.75rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
+.kpi-value{font-size:1.6rem;font-weight:700;color:#0f172a}
+.pos{color:#059669}.neg{color:#dc2626}
 table{width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:24px}
-th{background:#1e293b;color:#94a3b8;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #334155;position:sticky;top:0}
-td{padding:8px 12px;border-bottom:1px solid #1e293b}
-tr:hover td{background:rgba(56,189,248,0.05)}
-.table-wrap{overflow-x:auto;border:1px solid #334155;border-radius:12px;margin-bottom:32px}
-.note{color:#64748b;font-size:0.85rem;margin-top:32px;border-top:1px solid #1e293b;padding-top:16px}
-.warning{color:#fbbf24;font-size:0.85rem;margin-top:16px;padding:12px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);border-radius:8px}
+th{background:#f1f5f9;color:#475569;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #cbd5e1}
+td{padding:8px 12px;border-bottom:1px solid #e2e8f0}
+.table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:32px}
+.note{color:#64748b;font-size:0.85rem;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:16px}
 @media(max-width:768px){.kpi{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="container">
+  <div class="no-print" style="text-align:right;margin-bottom:16px">
+    <button onclick="window.print()" style="padding:8px 20px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">打印 / 保存 PDF</button>
+  </div>
+
   <h1>基金投资组合分析报告</h1>
   <p class="subtitle">报告日期：${new Date().toISOString().split('T')[0]}</p>
 
@@ -1530,25 +1548,28 @@ tr:hover td{background:rgba(56,189,248,0.05)}
     <tbody>${fundRows}</tbody>
   </table></div>
 
-  <div class="warning">
-    <strong>注意：</strong>公募基金数据为模拟数据，仅供参考。私募基金数据来源于用户上传文件。
-  </div>
-
   <p class="note">数据仅供参考，投资有风险。</p>
 </div>
+
+<script>
+  // Auto-trigger print dialog after page loads
+  window.onload = function() {
+    window.print();
+  };
+</script>
 </body></html>`;
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '基金分析报告.html';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('HTML 报告已导出');
+    // Open new window with the HTML report and trigger print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } else {
+      showToast('无法打开打印窗口，请允许弹出窗口', 'error');
+    }
   } catch (err) {
-    showToast('导出 HTML 失败: ' + err.message, 'error');
-    console.error('HTML export error:', err);
+    showToast('导出 PDF 失败: ' + err.message, 'error');
+    console.error('PDF export error:', err);
   }
 }
 
@@ -1557,7 +1578,7 @@ tr:hover td{background:rgba(56,189,248,0.05)}
 // ============================================================================
 
 document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
-document.getElementById('exportHtmlBtn').addEventListener('click', exportToHtml);
+document.getElementById('exportHtmlBtn').addEventListener('click', exportToPdf);
 
 // Refresh button
 const refreshBtn = document.getElementById('refreshBtn');
